@@ -119,6 +119,31 @@ class Uzi
 		return Str::create($value)->camelize();
 	}
 
+
+	/**
+	 * Join provided pieces with single instances of the value (glue)
+	 *
+	 * @param  string 			$glue
+	 * @param  strings|array 	...$pieces
+	 *
+	 * @return string
+	 */
+	public static function join($glue, ...$pieces)
+	{
+		if(count($pieces) === 1 && is_array($pieces[0])){
+			$pieces = $pieces[0];
+		}
+
+		$joined = (string) array_shift($pieces);
+
+		foreach ($pieces as $piece) {
+			$joined = static::finish($joined, $glue) . static::lstrip($piece, $glue);
+		}
+
+		return $joined;
+	}
+
+
 	/**
 	 * Creates an instance of Str and invokes the given method with the
 	 * rest of the passed arguments. The optional encoding is expected to be

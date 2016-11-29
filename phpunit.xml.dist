@@ -10,5 +10,8 @@
         <testsuite name="uzi.str">
             <file>tests/StrTest.php</file>
         </testsuite>
+        <testsuite name="uzi.regex">
+            <file>tests/RegexTest.php</file>
+        </testsuite>
     </testsuites>
 </phpunit>

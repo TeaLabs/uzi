@@ -17,3 +17,24 @@ function str($str = '', $encoding = null)
 {
 	return new Str($str, $encoding);
 }
+
+
+/**
+ * Determine whether the mbstring module is loaded. If strict is false (the default),
+ * checks whether a polyfill for mbstring exists.
+ *
+ * @param  bool   $strict
+ * @return bool
+ */
+function mbstring_loaded($strict = false)
+{
+	static $extension, $polyfill;
+
+	if(is_null($extension))
+		$extension = extension_loaded('mbstring');
+
+	if(is_null($polyfill))
+		$polyfill = function_exists('mb_strlen');
+
+	return ($extension || (!$strict && $polyfill));
+}

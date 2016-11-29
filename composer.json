@@ -5,8 +5,12 @@
         "multibyte", "string", "manipulation", "utility", "methods", "utf-8",
         "helpers", "utils", "utf"
     ],
-    "homepage": "https://github.com/davidkyalo/uzi",
     "license": "MIT",
+    "homepage": "https://github.com/TeaLabs/uzi",
+    "support": {
+        "issues": "https://github.com/TeaLabs/uzi/issues",
+        "source": "https://github.com/TeaLabs/uzi"
+    },
     "authors": [
         {
             "name": "David Kyalo",
@@ -17,23 +21,30 @@
     "require": {
         "php": ">=5.5.9",
         "ext-mbstring": "*",
+        "tea/future": "~0.1.0",
+        "tea/contracts": "~0.1.0",
+        "symfony/polyfill-iconv" : "~1.3.0",
+        "symfony/polyfill-mbstring" : "~1.3.0",
         "danielstjules/stringy": "~2.3"
     },
     "require-dev": {
         "phpunit/phpunit": "~5.0"
     },
-    "support": {
-        "issues": "https://github.com/davidkyalo/uzi/issues",
-        "source": "https://github.com/davidkyalo/uzi"
-    },
     "autoload": {
-        "psr-4": { "Tea\\Uzi\\": "src/" },
-        "files": ["src/helpers.php"]
+        "psr-4": {
+            "Tea\\Uzi\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
-            "Tea\\Uzi\\Tests\\": "tests/"
-        }
+            "Tea\\Tests\\Uzi\\": "tests/"
+        },
+        "files": [
+            "tests/init.php"
+        ]
     },
     "extra": {
         "branch-alias": {
