@@ -4,7 +4,7 @@ namespace Tea\Uzi;
 use ArrayAccess;
 use ArrayIterator;
 use Countable;
-use Exception;
+use TypeError;
 use Stringy\Stringy;
 use IteratorAggregate;
 use OutOfBoundsException;
@@ -35,20 +35,22 @@ class Str extends Stringy implements Sliceable
 	 * value is cast to a string prior to assignment, and if encoding is not
 	 * specified, it defaults to mb_internal_encoding().
 	 *
-	 * Throws an InvalidArgumentException if the given value is an array
-	 * or object without a __toString method (other than Str objects).
+	 * Throws a TypeError if the given value is an array or object without
+	 * a __toString method.
 	 *
 	 * @param  mixed  $value      The string value.
 	 * @param  string $encoding The character encoding
 	 * @return void
-	 * @throws \InvalidArgumentException
+	 * @throws TypeError
 	 */
 	public function __construct($value = '', $encoding = null)
 	{
-		if (is_array($value) || (is_object($value) && !method_exists($value, '__toString')))
-			throw new InvalidArgumentException("Str objects can only be created from strings, ".
+		if (!can_str_cast($value))
+			throw new TypeError("Str objects can only be created from strings, ".
 				"scalars (int, float, bool etc), other Str objects or objects that implement ".
-				"the __toString method. ".(is_object($value)?get_class($value):'ARRAY')." given.");
+				"the __toString method. "
+				.( is_object($value) ? get_class($value) : gettype($value) )
+				." given.");
 
 		$this->str = (string) $value;
 		$this->encoding = $encoding ?: \mb_internal_encoding();
@@ -59,17 +61,41 @@ class Str extends Stringy implements Sliceable
 	 * The given value is cast to a string prior to assignment, and if
 	 * encoding is not specified, it defaults to mb_internal_encoding().
 	 *
-	 * Throws an InvalidArgumentException if the given value is an array
-	 * or object without a __toString method (other than Str objects).
+	 * Throws a TypeError if the given value is an array or object without
+	 * a __toString method.
 	 *
 	 * @param  mixed  $value      The string value.
 	 * @param  string $encoding The character encoding
 	 * @return \Tea\Uzi\Str
-	 * @throws \InvalidArgumentException
+	 * @throws TypeError
 	 */
 	public static function create($value = '', $encoding = null)
 	{
 		return new static($value, $encoding);
+	}
+
+	/**
+	 * Returns an ASCII version of the string. A set of non-ASCII characters are
+	 * replaced with their closest ASCII counterparts, and the rest are removed
+	 * unless instructed otherwise.
+	 *
+	 * @param  bool    $removeUnsupported Whether or not to remove the
+	 *                                    unsupported characters
+	 * @return Tea\Uzi\Str
+	 */
+	public function ascii($removeUnsupported = true)
+	{
+		return $this->toAscii($removeUnsupported);
+	}
+
+	/**
+	 * Get the camel case value of the string.
+	 *
+	 * @return Tea\Uzi\Str
+	 */
+	public function camel()
+	{
+		return $this->camelize();
 	}
 
 	/**
@@ -97,83 +123,128 @@ class Str extends Stringy implements Sliceable
 	}
 
 	/**
-	 * Remove all space chars from string and replace them with a single instance
-	 * the given delimiter. If a delimiter is not provided, a single space char is used.
-	 * Space chars from the beginning and end of the string are trimmed.
+	 * Trims the string and replaces consecutive whitespace characters with a
+	 * single space. This includes tabs and newline characters, as well as
+	 * multibyte whitespace such as the thin space and ideographic space.
+	 *
+	 * Allows an optional delimiter which if provided will be used instead of
+	 * single spaces.
 	 *
 	 * @param string $delimiter
 	 * @return Tea\Uzi\Str
 	*/
 	public function compact($delimiter = ' ')
 	{
-		$patterns = ['/ +/u', "/^ +| +\$/u"];
-		$replacements = [$delimiter, ''];
-
-		return $this->pregReplace($patterns, $replacements);
+		return $this->regexReplace(['\s+', "^\s+|\s+\$"], [$delimiter, '']);
 	}
 
+
 	/**
-	 * Determine if the string contains a given substring(s).
+	 * Returns true if the string contains any $needles, false otherwise. By
+	 * default the comparison is case-sensitive, but can be made insensitive by
+	 * setting $caseSensitive to false.
 	 *
-	 * @param  string|array  $needles
-	 * @param  bool          $caseSensitive
+	 * @param  string|iterable|mixed  $needles       Substring(s) to look for
+	 * @param  bool    $caseSensitive   Whether or not to enforce case-sensitivity
 	 * @return bool
 	 */
 	public function contains($needles, $caseSensitive = true)
 	{
-		if (empty($needles))
-			return false;
+		$needles = $this->strToIterableOrIterable($needles, true, __METHOD__, 'needles');
 
-		foreach ((array) $needles as $needle)
+		foreach ($needles as $needle)
 			if (parent::contains($needle, $caseSensitive))
 				return true;
+
 		return false;
 	}
 
 	/**
-	 * Determine if the string contains any of the given substrings.
+	 * Returns true if the string ends with any of the given string(s), false otherwise.
+	 * By default, the comparison is case-sensitive, but can be made insensitive
+	 * by setting $caseSensitive to false.
 	 *
-	 * @param  string|array  $needles
-	 * @param  bool          $caseSensitive
-	 * @return bool
-	 */
-	public function containsAny($needles, $caseSensitive = true)
-	{
-		return $this->contains($needles, $caseSensitive);
-	}
-
-	/**
-	 * Returns true if the string ends with any of the given $needles,
-	 * false otherwise. By default, the comparison is case-sensitive,
-	 * but can be made insensitive by setting $caseSensitive to false.
-	 *
-	 * @param  string $substring     The substring to look for
-	 * @param  bool   $caseSensitive Whether or not to enforce case-sensitivity
+	 * @param  string|iterable|mixed  $needles       Substring(s) to look for
+	 * @param  bool      $caseSensitive       Whether or not to enforce case-sensitivity
 	 * @return bool
 	 */
 	public function endsWith($needles, $caseSensitive = true)
 	{
-		foreach ((array) $needles as $needle)
+		$needles = $this->strToIterableOrIterable($needles, true, __METHOD__, 'needles');
+
+		foreach ($needles as $needle)
 			if (parent::endsWith($needle, $caseSensitive))
 				return true;
+
 		return false;
 	}
 
-
 	/**
-	 * Ensures that the string ends with a single instance of $substring.
-	 * If it doesn't, it's appended.
-	 * Unlike ensureRight, all existing occurrences if the substring will
-	 * be stripped to a single instance.
+	 * Ensures that the string ends with a single instance of a substring.
+	 * Unless $trim is given and is false, all existing occurrences of the
+	 * substring at the end of the string will be trimmed.
 	 *
-	 * @param  string  $substr  The substring to add if not present
+	 * Calls $this->ensureRight() if $trim is false.
+	 *
+	 * @see Str::ensureLeft()
+	 *
+	 * @param  string  $substring The substring to add if not present
+	 * @param  bool    $trim      Whether to trim the substring or not.
 	 * @return Tea\Uzi\Str
 	 */
-	public function finish($substr)
+	public function finish($substring, $trim = true)
 	{
-		return new static($this->stripRight($substr).$substr, $this->encoding);
+		if(!$trim)
+			return $this->ensureRight($substring);
+
+		$str = $this->trimRight($substring, true);
+		$str->str = $str->str.$substring;
+
+		return $str;
 	}
 
+	/**
+	 * Determine if the str is a pattern matching any of the given value(s).
+	 *
+	 * By default, the comparison is case-sensitive, but can be made insensitive
+	 * by setting $caseSensitive to false.
+	 *
+	 * Also, asterisks (*) in str are translated into zero-or-more regular expression
+	 * wildcards to make it convenient to check if the values starts with the given
+	 * pattern such as "library/*", making any string check convenient. This can be
+	 * disabled by setting $wildcards to false.
+	 *
+	 * @param  string|iterable|mixed    $value Value(s) to match against str
+	 * @param  bool    $caseSensitive Whether or not to enforce case-sensitivity
+	 * @param  bool    $wildcards Whether or not to enforce case-sensitivity
+	 * @param  string  $value
+	 * @return bool
+	 */
+	public static function is($values, $caseSensitive = true, $wildcards = true)
+	{
+		$values = $this->strToIterableOrIterable($values, true, __METHOD__, 'values');
+
+		$pattern = Regex::quote($this->str);
+		if($wildcards)
+			$pattern = str_replace('\*', '.*', $pattern);
+
+		foreach ($values as $value) {
+			if ($this->str == $value)
+				return true;
+
+		}
+
+
+
+		$pattern = preg_quote($pattern, '#');
+
+		// Asterisks are translated into zero-or-more regular expression wildcards
+		// to make it convenient to check if the strings starts with the given
+		// pattern such as "library/*", making any string check convenient.
+		$pattern = str_replace('\*', '.*', $pattern);
+
+		return (bool) preg_match('#^'.$pattern.'\z#u', $value);
+	}
 
 	/**
 	 * Strip characters a or substring from the beginning of the string.
@@ -192,16 +263,26 @@ class Str extends Stringy implements Sliceable
 
 
 	/**
-	 * Remove all whitespaces from string and replace them with a single instance
-	 * the given delimiter. If a delimiter is not provided, a single space is used.
+	 * Returns true if $str matches the supplied pattern, false otherwise.
 	 *
-	 * @param string $delimiter
-	 * @return Tea\Uzi\Str
-	*/
-	public function minify($delimiter = ' ')
+	 * @param  string $pattern Regex pattern to match against
+	 * @return bool   Whether or not $str matches the pattern
+	 */
+	public function matches($patterns, $caseSensitive = true, $wildcards = true)
 	{
-		return $this->regexReplace('\s+', $delimiter);
+		// $patterns =
+
+
+
+		$regexEncoding = $this->regexEncoding();
+		$this->regexEncoding($this->encoding);
+
+		$match = \mb_ereg_match($pattern, $this->str);
+		$this->regexEncoding($regexEncoding);
+
+		return $match;
 	}
+
 
 	/**
 	 * Replaces occurrences of $search in $str by $replacement.
@@ -550,6 +631,29 @@ class Str extends Stringy implements Sliceable
 		return $this->pregReplace($pattern, $replacement, $modifiers, $limit, $count);
 	}
 
+
+	/**
+	 * Returns true if $str matches the supplied pattern, false otherwise.
+	 *
+	 * @param  string $pattern Regex pattern to match against
+	 * @return bool   Whether or not $str matches the pattern
+	 */
+	public function regexMatches($pattern, $option = true, $wildcards = true)
+	{
+		// $patterns =
+
+
+
+		$regexEncoding = $this->regexEncoding();
+		$this->regexEncoding($this->encoding);
+
+		$match = \mb_ereg_match($pattern, $this->str);
+		$this->regexEncoding($regexEncoding);
+
+		return $match;
+	}
+
+
 	/**
 	 * Safely wrap the given regex pattern(s) with the a delimiter and add modifiers
 	 * if none is set.
@@ -685,6 +789,36 @@ class Str extends Stringy implements Sliceable
 
 		$option =str_replace( array_merge(['r', 'p'], (array)$remove, (array)$add), '', $option);
 		return $option.$add;
+	}
+
+	/**
+	 * Get a valid iterable string(s) from the given value.
+	 *
+	 * @param  mixed   $value
+	 * @param  bool    $strict
+	 * @param  string  $method
+	 * @param  string  $argName
+	 * @return array|Traversable
+	 * @throws TypeError
+	 */
+	protected function strToIterableOrIterable($value, $strict = true, $method = null, $argName = null)
+	{
+		if(can_str_cast($value))
+			return [$value];
+
+		if(is_iterable($value))
+			return $value;
+
+		if(!$strict)
+			return (array) $value;
+
+		$method = $method ?: '';
+		$argName = $argName ?: '';
+		$type = ucfirst(is_object($value) ? get_class($value) : gettype($value));
+
+		throw new TypeError("Str method \"{$method}\" argument \"{$argName}\":"
+			." Accepts values that can be cast to string (see Tea\Uzi\can_str_cast()),"
+			." arrays or Traversable objects. \"{$type}\" given.");
 	}
 
 

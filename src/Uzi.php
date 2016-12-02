@@ -88,37 +88,26 @@ use ReflectionMethod;
  */
 class Uzi
 {
+
 	/**
-	 * A mapping of method names to the numbers of arguments it accepts. Each
-	 * should be two more than the equivalent Str method. Necessary as
-	 * static methods place the optional $encoding as the last parameter.
-	 *
-	 * @var string[]
-	 */
+	 * @var array
+	*/
 	protected static $methodArgs = null;
 
-	/**
-	 * Transliterate a UTF-8 value to ASCII.
-	 *
-	 * @param  string  $value
-	 * @return string
-	 */
-	public static function ascii($value)
-	{
-		return Str::create($value)->toAscii();
-	}
 
 	/**
-	 * Convert a value to camel case.
+	 * Determine whether a value can be casted to string.
 	 *
-	 * @param  string  $value
-	 * @return string
+	 * @see Tea\Uzi\can_str_cast()
+	 * @uses Tea\Uzi\can_str_cast()
+	 *
+	 * @param  mixed   $value
+	 * @return bool
 	 */
-	public static function camel($value)
+	public static function canCast($value)
 	{
-		return Str::create($value)->camelize();
+		return can_str_cast($value);
 	}
-
 
 	/**
 	 * Join provided pieces with single instances of the value (glue)
@@ -141,6 +130,46 @@ class Uzi
 		}
 
 		return $joined;
+	}
+
+	/**
+	 * Return a formatted string.
+	 *
+	 * @param  string  $format
+	 * @param  array   $placeholders
+	 * @param  mixed   $default
+	 * @return string
+	 */
+	public static function render($format, $placeholders = [], $default = '')
+	{
+		$placeholders = (array) $placeholders;
+		$matches = [];
+		if(!preg_match_all('/\{([^{}]*)\}+/u', $format, $matches))
+			return sprintf($format, ...array_values($placeholders));
+
+		ksort($placeholders, SORT_NATURAL);
+		$placeholders['__default__'] = $default;
+		$positions = array_flip(array_keys($placeholders));
+
+		$type_specifiers = '/([sducoxXbgGeEfF])$/u';
+		$replacements = [];
+
+		foreach ($matches[1] as $match) {
+
+			list($name, $options) = array_pad(explode(':', $match, 2), 2, '');
+			if(!preg_match($type_specifiers, $options))
+				$options .= 's';
+
+			$position = array_key_exists($name, $positions)
+					? $positions[$name]+1 : $positions['__default__']+1;
+
+			$pattern = '%'.$position.'$'.$options;
+			$replacements['{'.$match.'}'] = $pattern;
+		}
+
+		$format = str_replace(array_keys($replacements), array_values($replacements), $format);
+
+		return sprintf($format, ...array_values($placeholders));
 	}
 
 

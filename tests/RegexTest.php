@@ -2,10 +2,11 @@
 namespace Tea\Tests\Uzi;
 
 use Tea\Uzi\Regex;
+use Tea\Tests\Uzi\Providers\RegexProviders;
 
 class RegexTest extends TestCase
 {
-	use RegexTestProviders;
+	use RegexProviders;
 
 	/**
 	 * @dataProvider wrapProvider()

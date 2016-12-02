@@ -3,107 +3,207 @@ namespace Tea\Tests\Uzi;
 
 use Tea\Uzi\Str;
 
+use Tea\Tests\Uzi\Providers\StrProviders;
 
 class StrTest extends TestCase
 {
-	use StrTestProviders;
+	use StrProviders;
+
+
+	/**
+	 * @dataProvider createStrProvider()
+	 */
+	public function testCreate($value, $encoding = false)
+	{
+		$result = Str::create($value, $encoding);
+		$this->assertStr($result);
+		$this->assertEquals( (string) $value, $result);
+	}
+
+	/**
+	 * @dataProvider createStrExceptionProvider()
+	 * @expectedException TypeError
+	 */
+	public function testCreateException($value, $encoding = false)
+	{
+		$result = Str::create($value, $encoding);
+		$this->fail('Expecting exception when the Str instance '.
+			'from a value that cannot be cast to string.');
+	}
+
+
+	/**
+	 * @dataProvider asciiProvider()
+	 */
+	public function testAscii($expected, $value, $removeUnsupported = true)
+	{
+		$str = Str::create($value);
+		$result = $str->ascii($removeUnsupported);
+		$this->assertStr($result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($value, $str);
+	}
+
 
 	/**
 	 * @dataProvider beginProvider()
 	 */
-	public function testBegin($expected, $str, $substring = null, $trim = true, $encoding = null)
+	public function testBegin($expected, $value, $substring = null, $trim = true, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
+		$str = Str::create($value, $encoding);
 		$result = $str->begin($substring, $trim);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($value, $str);
 	}
+
+
+	/**
+	 * @dataProvider camelProvider()
+	 */
+	public function testCamel($expected, $value, $encoding = null)
+	{
+		$str = Str::create($value, $encoding);
+		$result = $str->camel();
+		$this->assertStr($result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($value, $str);
+	}
+
 
 	/**
 	 * @dataProvider compactProvider()
 	 */
-	public function _testCompact($expected, $str, $delimiter = ' ', $encoding = null)
+	public function testCompact($expected, $value, $delimiter = ' ', $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
+		$str = Str::create($value, $encoding);
 		$result = $str->compact($delimiter);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($value, $str);
 	}
+
+	/**
+	 * @dataProvider containsProvider()
+	 */
+	public function testContains($expected, $haystack, $needles, $caseSensitive = true, $encoding = null)
+	{
+		$str = Str::create($haystack, $encoding);
+		$result = $str->contains($needles, $caseSensitive);
+		$this->assertInternalType('boolean', $result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($haystack, $str);
+	}
+
+	/**
+	 * @dataProvider containsAnyProvider()
+	 */
+	public function testContainsAny($expected, $haystack, $needles,	$caseSensitive = true, $encoding = null)
+	{
+		$str = Str::create($haystack, $encoding);
+		$result = $str->containsAny($needles, $caseSensitive);
+		$this->assertInternalType('boolean', $result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($haystack, $str);
+	}
+
+	/**
+	 * @dataProvider containsErrorProvider()
+	 * @expectedException TypeError
+	 */
+	public function testContainsError($haystack, $needles, $caseSensitive = true, $encoding = null)
+	{
+		$str = Str::create($haystack, $encoding);
+		$result = $str->contains($needles, $caseSensitive);
+		$this->fail('Expecting error when the needles argument can\'t '.
+			'be cast to string and is not Traversable.');
+	}
+
+
+	/**
+	 * @dataProvider endsWithProvider()
+	 */
+	public function testEndsWith($expected, $value, $needles, $caseSensitive = true, $encoding = null)
+	{
+		$str = Str::create($value, $encoding);
+		$result = $str->endsWith($needles, $caseSensitive);
+		$this->assertInternalType('boolean', $result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
+	}
+
+
 
 	/**
 	 * @dataProvider finishProvider()
 	 */
-	public function _testFinish($expected, $str, $substr = null, $encoding = null)
+	public function testFinish($expected, $value, $substr = null, $trim = true, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
-		$result = $str->finish($substr);
+		$str = Str::create($value, $encoding);
+		$result = $str->finish($substr, $trim);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
 	}
 
 	/**
-	 * @dataProvider minifyProvider()
+	 * @dataProvider trimProvider()
 	 */
-	public function _testMinify($expected, $str, $delimiter = ' ', $encoding = null)
+	public function testTrim($expected, $value, $chars = null, $wholeStr = false, $limit = -1, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
-		$result = $str->minify($delimiter);
+		$str = Str::create($value, $encoding);
+		$result = $str->trim($chars, $wholeStr, $limit);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
 	}
 
 	/**
-	 * @dataProvider stripProvider()
+	 * @dataProvider trimLeftProvider()
 	 */
-	public function _testStrip($expected, $str, $substr = null, $limit = -1, $encoding = null)
+	public function testTrimLeft($expected, $value, $chars = null, $wholeStr = false, $limit = -1, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
-		$result = $str->strip($substr, $limit);
+		$str = Str::create($value, $encoding);
+		$result = $str->trimLeft($chars, $wholeStr, $limit);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
 	}
 
 	/**
-	 * @dataProvider stripLeftProvider()
+	 * @dataProvider trimLeftProvider()
 	 */
-	public function _testStripLeft($expected, $str, $substr = null, $limit = -1, $encoding = null)
+	public function testLtrim($expected, $value, $chars = null, $wholeStr = false, $limit = -1, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
-		$result = $str->stripLeft($substr, $limit);
+		$str = Str::create($value, $encoding);
+		$result = $str->ltrim($chars, $wholeStr, $limit);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
 	}
 
 	/**
-	 * @dataProvider stripLeftProvider()
+	 * @dataProvider trimRightProvider()
 	 */
-	public function _testLStrip($expected, $str, $substr = null, $limit = -1, $encoding = null)
+	public function testTrimRight($expected, $value, $chars = null, $wholeStr = false, $limit = -1, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
-		$result = $str->lstrip($substr, $limit);
+		$str = Str::create($value, $encoding);
+		$result = $str->trimRight($chars, $wholeStr, $limit);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
 	}
 
 	/**
-	 * @dataProvider stripRightProvider()
+	 * @dataProvider trimRightProvider()
 	 */
-	public function _testStripRight($expected, $str, $substr = null, $limit = -1, $encoding = null)
+	public function testRtrim($expected, $value, $chars = null, $wholeStr = false, $limit = -1, $encoding = null)
 	{
-		$str = Str::create($str, $encoding);
-		$result = $str->stripRight($substr, $limit);
+		$str = Str::create($value, $encoding);
+		$result = $str->rtrim($chars, $wholeStr, $limit);
 		$this->assertStr($result);
 		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
 	}
 
-	/**
-	 * @dataProvider stripRightProvider()
-	 */
-	public function _testRStrip($expected, $str, $substr = null, $limit = -1, $encoding = null)
-	{
-		$str = Str::create($str, $encoding);
-		$result = $str->rstrip($substr, $limit);
-		$this->assertStr($result);
-		$this->assertEquals($expected, $result);
-	}
 }

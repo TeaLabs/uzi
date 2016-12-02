@@ -25,6 +25,35 @@ class Regex
 	}
 
 	/**
+	 * Perform a regular expression search and replace on a string using the appropriate
+	 * regex method depending on the encoding.
+	 * If string encoding is UTF-8 or ASCII, preg_replace will be used. Otherwise,
+	 * mb_ereg_replace is used if available.
+	 *
+	 * When calling preg_replace, delimiters ('/') will be added to the pattern(s).
+	 *
+	 * If $option is provided, it is used as the option parameter when calling
+	 * mb_ereg_replace and as modifiers when calling preg_replace.
+	 *
+	 * Note that parameters $limit and $count only work with preg_replace.
+	 *
+	 * @param  string|array  $pattern     The regular expression pattern
+	 * @param  string|array  $replacement The replacement string(s)
+	 * @param  string        $options     Option/modifiers
+	 * @param  int           $limit       The maximum possible replacements.
+	 * @param  int           $count       Filled with the number of replacements done
+	 * @return Tea\Uzi\Str
+	 */
+	public function replace($pattern, $replacement, $subject, $option = null, $limit = -1, &$count = null)
+	{
+		if(!$this->supportsEncoding(true))
+			return $this->mregReplace($pattern, $replacement, $option);
+
+		$modifiers = static::optionToModifiers($option, 'u');
+		return $this->pregReplace($pattern, $replacement, $modifiers, $limit, $count);
+	}
+
+	/**
 	 * Quote special regular expression characters including the delimeter.
 	 * Alias for Regex::quote()
 	 *
@@ -104,7 +133,7 @@ class Regex
 			$wrapped = [];
 
 			foreach ($regex as $r)
-				$wrapped[] = static::pregDelimit($r, $delimiter, $modifiers, $bracketStyle);
+				$wrapped[] = static::wrap($r, $delimiter, $modifiers, $bracketStyle);
 
 			return $wrapped;
 		}
@@ -133,6 +162,33 @@ class Regex
 		// $regex = str_replace([$start, $end], ['\\'.$start, "\\".$end], $regex);
 
 		return $start.$regex.$end.$modifiers;
+	}
+
+	/**
+	 * Cast the none Str value(s) to Str instances.
+	 *
+	 * @param  mixed   $values
+	 * @param  string  $encoding
+	 * @param  bool    $iterable
+	 * @return Tea\Uzi\Str
+	 */
+	protected static function castToStr($values, $encoding = null, $mapIterable = true)
+	{
+		if($values instanceof Str)
+			return true;
+
+		if(can_str_cast($value))
+			return new Str($values, $encoding);
+
+		if($mapIterable && is_iterable($values)){
+			$instances = [];
+			foreach ($values as $value){
+				$instances[] = static::castToStr($values, $encoding, false);
+			}
+			return $instances;
+		}
+
+		return false;
 	}
 }
 

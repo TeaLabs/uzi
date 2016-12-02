@@ -1,7 +1,7 @@
 <?php
-namespace Tea\Tests\Uzi;
+namespace Tea\Tests\Uzi\Providers;
 
-trait RegexTestProviders
+trait RegexProviders
 {
 	public function wrapProvider()
 	{
