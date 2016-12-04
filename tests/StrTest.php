@@ -206,4 +206,18 @@ class StrTest extends TestCase
 		$this->assertEquals($str, $value);
 	}
 
+	public function testIs()
+	{
+		# code...
+	}
+
+	public function testRegexReplace()
+	{
+		# code...
+	}
+
+	public function testReplace()
+	{
+		# code...
+	}
 }

@@ -6,6 +6,7 @@ use ArrayIterator;
 use Countable;
 use TypeError;
 use Stringy\Stringy;
+use Tea\Regex\Regex;
 use IteratorAggregate;
 use OutOfBoundsException;
 use InvalidArgumentException;
@@ -285,32 +286,37 @@ class Str extends Stringy implements Sliceable
 
 
 	/**
-	 * Replaces occurrences of $search in $str by $replacement.
+	 * Perform a regular expression search and replace on the string.
 	 *
-	 * @param  string|array  $search      The needle to search for
-	 * @param  string  $replacement The string to replace with
-	 * @return Stringy Object with the resulting $str after the replacements
+	 * @uses Tea\Regex\Regex::replace()
+	 *
+	 * @param  string|array  $pattern     The regular expression pattern
+	 * @param  string|array  $replacement The replacement string(s)
+	 * @param  int           $limit       The maximum possible replacements.
+	 * @param  int           $count       Filled with the number of replacements done
+	 * @return Tea\Uzi\Str
 	 */
-	public function replace($search, $replacement, $regex = false, $options = null, $limit = null, &$count = null)
+	public function regexReplace($pattern, $replacement, $limit = -1, &$count = null)
 	{
-		if(!$regex)
-			$search = $this->pregQuote($search);
-		return $this->regexReplace($search, $replacement, $options, $limit, $count);
+		if(is_string($limit)) $limit = -1;
+		$str = Regex::replace(Regex::safeWrap($pattern), $replacement, $this, $limit, $count);
+		return new static($str, $this->encoding);
 	}
 
 	/**
-	 * Replaces occurrences of the given pattern(s) in string by provided
-	 * replacement(s). An alias for preg_replace().
+	 * Replaces occurrences of search in string by $replacement.
 	 *
-	 * @param  string|array  $pattern     The regular expression pattern(s)
-	 * @param  string|array  $replacements The string(s) to replace with
-	 * @param  int           $limit       The maximum possible replacements for each pattern
-	 * @param  int           $count       Variable filled with the number of replacements done.
+	 * @uses Str::regexReplace()
+	 *
+	 * @param  string|array  $search      The needle to search for
+	 * @param  string  $replacement The string to replace with
+	 * @param  int           $limit       The maximum possible replacements.
+	 * @param  int           $count       Filled with the number of replacements done
 	 * @return Tea\Uzi\Str
 	 */
-	public function pregMatch($pattern, $flags = 0, $offset = 0)
+	public function replace($search, $replacement, $limit = -1, &$count = null)
 	{
-		throw new RuntimeExpception("Method ".__METHOD__." not implemented.");
+		return $this->regexReplace(Regex::quote($search), $replacement, $limit, $count);
 	}
 
 	/**
@@ -450,47 +456,6 @@ class Str extends Stringy implements Sliceable
 	}
 
 	/**
-	 * Detect the string's character encoding.
-	 *
-	 * @param  string|array  $encodingList
-	 * @param  bool          $strict
-	 * @return string|false
-	 */
-	public function detectEncoding($encodingList = null, $strict = true)
-	{
-		return mb_detect_encoding($this->str, $encodingList, $strict);
-	}
-
-	/**
-	 * Determine if the string encoding is safe to use with PCRE functions.
-	 *
-	 * @return bool
-	 */
-	public function isPregSupported()
-	{
-		if(isset($this->isPregSupported))
-			return $this->isPregSupported;
-
-		$encoding = $this->detectEncoding();
-		if(!$encoding)
-			$encoding = $this->encoding;
-
-		$supported = $this->pregSupported();
-		return $this->isPregSupported = (isset($supported[$encoding]) && $supported[$encoding]);
-	}
-
-	/**
-	 * Get a list of encodings supported by PCRE.
-	 *
-	 * @return array
-	 */
-	public static function pregSupported()
-	{
-		return static::$pregSupported;
-	}
-
-
-	/**
 	 * Extract a slice of the collection as specified by the offset and length.
 	 *
 	 * If offset is non-negative, the sequence will start at that offset in the
@@ -534,12 +499,13 @@ class Str extends Stringy implements Sliceable
 	 *
 	 * @param  string|array  $pattern     The regular expression pattern(s)
 	 * @param  string|array  $replacement The string(s) to replace with
-	 * @param  string|null   $modifiers   Modifiers
+	 * @param  string|array  $subject     The string(s) to match
+	 * @param  string|null   $option      Options
 	 * @param  int           $limit       The maximum possible replacements for each pattern
 	 * @param  int           $count       variable filled with the number of replacements done.
 	 * @return Tea\Uzi\Str
 	 */
-	public function mregReplace($pattern, $replacement, $option = null)
+	protected function mbregexReplace($pattern, $replacement, $subject, $option = null, $limit = -1, &$count = null)
 	{
 		if(!mbstring_loaded(true)){
 			$modifiers = static::optionToModifiers($option, 'u');
@@ -601,36 +567,6 @@ class Str extends Stringy implements Sliceable
 
 		return static::create($result, $this->encoding);
 	}
-
-	/**
-	 * Perform a regular expression search and replace on the string using
-	 * the appropriate regex method depending on the encoding.
-	 * If string encoding is UTF-8 or ASCII, preg_replace will be used.
-	 * Otherwise, mb_ereg_replace is used.
-	 *
-	 * When calling preg_replace, delimiters ('/') will be added to the pattern(s).
-	 *
-	 * If $option is provided, it is used as the option parameter when calling
-	 * mb_ereg_replace and as modifiers when calling preg_replace.
-	 *
-	 * Note that parameters $limit and $count only work with preg_replace.
-	 *
-	 * @param  string|array  $pattern     The regular expression pattern
-	 * @param  string|array  $replacement The replacement string(s)
-	 * @param  string        $options     Option/modifiers
-	 * @param  int           $limit       The maximum possible replacements.
-	 * @param  int           $count       Filled with the number of replacements done
-	 * @return Tea\Uzi\Str
-	 */
-	public function regexReplace($pattern, $replacement, $option = null, $limit = -1, &$count = null)
-	{
-		if(!$this->supportsEncoding(true))
-			return $this->mregReplace($pattern, $replacement, $option);
-
-		$modifiers = static::optionToModifiers($option, 'u');
-		return $this->pregReplace($pattern, $replacement, $modifiers, $limit, $count);
-	}
-
 
 	/**
 	 * Returns true if $str matches the supplied pattern, false otherwise.
