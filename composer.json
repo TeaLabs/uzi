@@ -21,7 +21,6 @@
     "require": {
         "php": ">=5.4",
         "ext-mbstring": "*",
-        "tea/regex": "~0.1.0",
         "tea/future": "~0.1.0",
         "tea/contracts": "~0.1.0",
         "symfony/polyfill-iconv" : "~1.3.0",

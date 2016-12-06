@@ -6,7 +6,6 @@ use ArrayIterator;
 use Countable;
 use TypeError;
 use Stringy\Stringy;
-use Tea\Regex\Regex;
 use IteratorAggregate;
 use OutOfBoundsException;
 use InvalidArgumentException;
@@ -59,7 +58,7 @@ class Str extends Stringy implements Sliceable
 
 	/**
 	 * Creates a new Str object from the given value and encoding.
-	 * The given value is cast to a string prior to assignment, and if
+	 * The given valutoAsce is cast to a string prior to assignment, and if
 	 * encoding is not specified, it defaults to mb_internal_encoding().
 	 *
 	 * Throws a TypeError if the given value is an array or object without
@@ -73,30 +72,6 @@ class Str extends Stringy implements Sliceable
 	public static function create($value = '', $encoding = null)
 	{
 		return new static($value, $encoding);
-	}
-
-	/**
-	 * Returns an ASCII version of the string. A set of non-ASCII characters are
-	 * replaced with their closest ASCII counterparts, and the rest are removed
-	 * unless instructed otherwise.
-	 *
-	 * @param  bool    $removeUnsupported Whether or not to remove the
-	 *                                    unsupported characters
-	 * @return Tea\Uzi\Str
-	 */
-	public function ascii($removeUnsupported = true)
-	{
-		return $this->toAscii($removeUnsupported);
-	}
-
-	/**
-	 * Get the camel case value of the string.
-	 *
-	 * @return Tea\Uzi\Str
-	 */
-	public function camel()
-	{
-		return $this->camelize();
 	}
 
 	/**
@@ -136,7 +111,7 @@ class Str extends Stringy implements Sliceable
 	*/
 	public function compact($delimiter = ' ')
 	{
-		return $this->regexReplace(['\s+', "^\s+|\s+\$"], [$delimiter, '']);
+		return $this->regexReplace(['\s+', "^\s+|\s+$"], [$delimiter, '']);
 	}
 
 
@@ -205,63 +180,73 @@ class Str extends Stringy implements Sliceable
 	}
 
 	/**
-	 * Determine if the str is a pattern matching any of the given value(s).
+	 * Determine if the string is a pattern matching the given value.
+	 *
+	 * Asterisks (*) in the string are translated into zero-or-more regular expression
+	 * wildcards to make it convenient to check if the values starts with the given
+	 * pattern such as "library/*", making any string check convenient. This can be
+	 * disabled by setting wildcards to false.
 	 *
 	 * By default, the comparison is case-sensitive, but can be made insensitive
 	 * by setting $caseSensitive to false.
 	 *
-	 * Also, asterisks (*) in str are translated into zero-or-more regular expression
-	 * wildcards to make it convenient to check if the values starts with the given
-	 * pattern such as "library/*", making any string check convenient. This can be
-	 * disabled by setting $wildcards to false.
-	 *
-	 * @param  string|iterable|mixed    $value Value(s) to match against str
+	 * @param  string  $value Value to match against string pattern
+	 * @param  bool    $wildcards Whether or not to treat asterisks (*) as wildcards
 	 * @param  bool    $caseSensitive Whether or not to enforce case-sensitivity
-	 * @param  bool    $wildcards Whether or not to enforce case-sensitivity
-	 * @param  string  $value
 	 * @return bool
 	 */
-	public static function is($values, $caseSensitive = true, $wildcards = true)
+	public function is($value, $wildcards = true, $caseSensitive = true)
 	{
-		$values = $this->strToIterableOrIterable($values, true, __METHOD__, 'values');
+		if($this->str == $value)
+			return true;
 
+		return Regex::is($this->buildStrPatternForIs($wildcards, $caseSensitive), $value);
+	}
+
+	/**
+	 * Determine if the string is a pattern matching any of the given values.
+	 *
+	 * Asterisks (*) in the string are translated into zero-or-more regular expression
+	 * wildcards to make it convenient to check if the values starts with the given
+	 * pattern such as "library/*", making any string check convenient. This can be
+	 * disabled by setting wildcards to false.
+	 *
+	 * By default, the comparison is case-sensitive, but can be made insensitive
+	 * by setting $caseSensitive to false.
+	 *
+	 * @param  iterable  $values Values to match against string pattern
+	 * @param  bool    $wildcards Whether or not to treat asterisks (*) as wildcards
+	 * @param  bool    $caseSensitive Whether or not to enforce case-sensitivity
+	 * @return bool
+	 */
+	public function isAny($values, $wildcards = true, $caseSensitive = true)
+	{
+		$pattern = $this->buildStrPatternForIs($wildcards, $caseSensitive);
+
+		foreach ($values as $value)
+			if ($this->str == $value || Regex::is($pattern, $value))
+				return true;
+
+		return false;
+	}
+
+	/**
+	 * Build the string pattern used for $this->is() and $this->isAny() matches
+	 *
+	 * @param  bool $wildcards
+	 * @param  bool $caseSensitive
+	 * @return string
+	 */
+	protected function buildStrPatternForIs($wildcards, $caseSensitive)
+	{
 		$pattern = Regex::quote($this->str);
 		if($wildcards)
 			$pattern = str_replace('\*', '.*', $pattern);
 
-		foreach ($values as $value) {
-			if ($this->str == $value)
-				return true;
+		$pattern = Regex::wrap('^'. $pattern . '\z');
 
-		}
-
-
-
-		$pattern = preg_quote($pattern, '#');
-
-		// Asterisks are translated into zero-or-more regular expression wildcards
-		// to make it convenient to check if the strings starts with the given
-		// pattern such as "library/*", making any string check convenient.
-		$pattern = str_replace('\*', '.*', $pattern);
-
-		return (bool) preg_match('#^'.$pattern.'\z#u', $value);
+		return $caseSensitive ? $pattern : $pattern.'i';
 	}
-
-	/**
-	 * Strip characters a or substring from the beginning of the string.
-	 *
-	 * @see    Str::trimLeft()
-	 *
-	 * @param  string  	$chars    String of characters to strip.
-	 * @param  bool  	$wholeStr Whether or not to match the entire string instead.
-	 * @param  int  	$limit    The number of occurrences to be striped.
-	 * @return Tea\Uzi\Str
-	 */
-	public function ltrim($chars = null, $wholeStr = false, $limit = -1)
-	{
-		return $this->trimLeft($chars, $wholeStr, $limit);
-	}
-
 
 	/**
 	 * Returns true if $str matches the supplied pattern, false otherwise.
@@ -317,21 +302,6 @@ class Str extends Stringy implements Sliceable
 	public function replace($search, $replacement, $limit = -1, &$count = null)
 	{
 		return $this->regexReplace(Regex::quote($search), $replacement, $limit, $count);
-	}
-
-	/**
-	 * Strip characters a or substring from the end of the string.
-	 *
-	 * @see    Str::trimRight()
-	 *
-	 * @param  string  	$chars    String of characters to strip.
-	 * @param  bool  	$wholeStr Whether or not to match the entire string instead.
-	 * @param  int  	$limit    The number of occurrences to be striped.
-	 * @return Tea\Uzi\Str
-	 */
-	public function rtrim($chars = null, $wholeStr = false, $limit = -1)
-	{
-		return $this->trimRight($chars, $wholeStr, $limit);
 	}
 
 	/**
@@ -425,22 +395,6 @@ class Str extends Stringy implements Sliceable
 
 	/**
 	 * Wraps the string with a single instance of the given substring.
-	 * Unless $trim is given and is false, all existing occurrences of the
-	 * substring at the start and end of the string will be trimmed. Otherwise,
-	 * the string will be wrapped without checking.
-	 *
-	 * @param  string  $substring The substring to add to both sides
-	 * @param  bool    $trim      Whether to first trim off the substring.
-	 * @return Tea\Uzi\Str
-	 */
-	public function surround($substring, $trim = true)
-	{
-		$str = $trim ? $this->trim($substring, true) : $this->str;
-		return new static( $substring.$str.$substring, $this->encoding);
-	}
-
-	/**
-	 * Wraps the string with a single instance of the given substring.
 	 * Alias for Str::surround()
 	 *
 	 * @see Str::surround()
@@ -452,7 +406,8 @@ class Str extends Stringy implements Sliceable
 	 */
 	public function wrap($substring, $trim = true)
 	{
-		return $this->surround($substring, $trim);
+		$str = $trim ? $this->trim($substring, true) : $this->str;
+		return new static( $substring.$str.$substring, $this->encoding);
 	}
 
 	/**
@@ -474,9 +429,9 @@ class Str extends Stringy implements Sliceable
 	 * @param  bool  $preserveKeys
 	 * @return mixed
 	 */
-	public function slice($offset, $length = null, $preserveKeys = false)
+	public function slice($start, $end = null, $preserveKeys = false)
 	{
-		throw new \BadMethodCallException("Method ".__METHOD__." Not Implemented.");
+		return parent::slice($start, $end);
 	}
 
 	/**
@@ -490,82 +445,6 @@ class Str extends Stringy implements Sliceable
 	public function offsetGet($index)
 	{
 		throw new \BadMethodCallException("Method ".__METHOD__." Not Implemented.");
-	}
-
-	/**
-	 * Replaces occurrences of the given pattern(s) in string with provided
-	 * replacement(s). An alias for mb_ereg_replace() with a fallback to preg_replace
-	 * if the mbstring module is not installed.
-	 *
-	 * @param  string|array  $pattern     The regular expression pattern(s)
-	 * @param  string|array  $replacement The string(s) to replace with
-	 * @param  string|array  $subject     The string(s) to match
-	 * @param  string|null   $option      Options
-	 * @param  int           $limit       The maximum possible replacements for each pattern
-	 * @param  int           $count       variable filled with the number of replacements done.
-	 * @return Tea\Uzi\Str
-	 */
-	protected function mbregexReplace($pattern, $replacement, $subject, $option = null, $limit = -1, &$count = null)
-	{
-		if(!mbstring_loaded(true)){
-			$modifiers = static::optionToModifiers($option, 'u');
-			return $this->pregReplace($pattern, $replacement, $modifiers);
-		}
-
-		if(is_array($pattern)){
-			$map = [];
-			$rep_arr = is_array($replacement);
-			$replacement = array_values($replacement);
-			foreach (array_values($pattern) as $k => $p) {
-				if($rep_arr)
-					$map[$p] = isset($replacement[$k]) ? $replacement[$k] : '';
-				else
-					$map[$p] = $replacement;
-			}
-		}
-		else{
-			$map = [$pattern => $replacement];
-		}
-
-		if(is_null($option)) $option = 'msr';
-
-		$regexEncoding = $this->regexEncoding();
-		$this->regexEncoding($this->encoding);
-
-		$result = $this->str;
-		foreach ($map as $p => $r) {
-			$result = mb_ereg_replace($p, $r, $result, $option);
-		}
-
-		$this->regexEncoding($regexEncoding);
-
-		return new static($result, $this->encoding);
-	}
-
-	/**
-	 * Replaces occurrences of the given pattern(s) in string with provided
-	 * replacement(s). An alias for preg_replace() but ensures the encoding
-	 * is supported by preg_replace().
-	 *
-	 * @param  string|array  $pattern     The regular expression pattern(s)
-	 * @param  string|array  $replacement The string(s) to replace with
-	 * @param  string|null   $modifiers   Modifiers
-	 * @param  int           $limit       The maximum possible replacements for each pattern
-	 * @param  int           $count       variable filled with the number of replacements done.
-	 * @return Tea\Uzi\Str
-	 */
-	public function pregReplace($pattern, $replacement, $modifiers = null, $limit = -1, &$count = null)
-	{
-		if(!$this->supportsEncoding())
-			return;
-
-		$pattern = Regex::wrap($pattern, null, $modifiers);
-
-		// $pattern = static::pregDelimit($pattern, '/', $modifiers);
-
-		$result = preg_replace($pattern, $replacement, $this->str, $limit, $count);
-
-		return static::create($result, $this->encoding);
 	}
 
 	/**
@@ -589,65 +468,75 @@ class Str extends Stringy implements Sliceable
 		return $match;
 	}
 
+/* Alias Methods */
 
 	/**
-	 * Safely wrap the given regex pattern(s) with the a delimiter and add modifiers
-	 * if none is set.
+	 * Returns an ASCII version of the string. A set of non-ASCII characters are
+	 * replaced with their closest ASCII counterparts, and the rest are removed
+	 * unless instructed otherwise.
 	 *
-	 * To add bracket style delimiters, pass a delimiter with both the opening
-	 * and closing characters eg. '<>', '{}'. For normal ones use a single
-	 * character eg: /','#','%'.
-	 *
-	 * If $bracketStyle is provided and is true, will check for bracket style
-	 * delimiters ie: '[]', '{}', '()', '<>'. Use this when the wrapping a
-	 * pattern that might contain bracket style delimiters. But use with care
-	 * as the pattern might contain non-quoted brackets.
-	 * To be safe, you can provide the bracket delimiter(s) that should be checked
-	 * as an array. This will avoid checking through all possible bracket style
-	 * delimiters. Eg: if $bracketStyle = ['{<', '}>'], will only check for '{}' and
-	 * '<>' delimiters.
-	 *
-	 * @param  string|array $regex         The regex pattern(s)
-	 * @param  string       $delimiter     The delimiter. Defaults to '/'
-	 * @param  string       $modifiers     The modifiers. Defaults to 'u'
-	 * @param  bool|array   $bracketStyle  Whether to check for bracket delimiters. Defaults to false
-	 * @return string|array
+	 * @param  bool    $removeUnsupported Whether or not to remove the
+	 *                                    unsupported characters
+	 * @return Tea\Uzi\Str
 	 */
-	// public static function pregDelimit($regex, $delimiter = null, $modifiers = null, $bracketStyle = false)
-	// {
-	// 	if(is_array($regex)){
-	// 		$wrapped = [];
+	public function ascii($removeUnsupported = true)
+	{
+		return $this->toAscii($removeUnsupported);
+	}
 
-	// 		foreach ($regex as $r)
-	// 			$wrapped[] = static::pregDelimit($r, $delimiter, $modifiers, $bracketStyle);
+	/**
+	 * Get the camel case value of the string.
+	 *
+	 * @return Tea\Uzi\Str
+	 */
+	public function camel()
+	{
+		return $this->camelize();
+	}
 
-	// 		return $wrapped;
-	// 	}
 
-	// 	$regex_0 = mb_substr($regex, 0, 1);
-	// 	if(!$regex || strpos('/#~+%', $regex_0) !== false)
-	// 		return $regex;
+	/**
+	 * Convert the string to lower-case.
+	 *
+	 * @return Str
+	 */
+	public function lower()
+	{
+		return $this->toLowerCase();
+	}
 
-	// 	if($bracketStyle){
-	// 		$brackets = is_array($bracketStyle) ? $bracketStyle : ['<({[', '>)}]'];
+	/**
+	 * Strip characters a or substring from the beginning of the string.
+	 *
+	 * @see    Str::trimLeft()
+	 *
+	 * @param  string  	$chars    String of characters to strip.
+	 * @param  bool  	$wholeStr Whether or not to match the entire string instead.
+	 * @param  int  	$limit    The number of occurrences to be striped.
+	 * @return Tea\Uzi\Str
+	 */
+	public function ltrim($chars = null, $wholeStr = false, $limit = -1)
+	{
+		return $this->trimLeft($chars, $wholeStr, $limit);
+	}
 
-	// 		if(strpos($brackets[0], $regex_0) !== false)
-	// 			if(strpos($brackets[1], mb_substr(rtrim($regex, 'uimsxeADSUXJ'), -1)) !== false)
-	// 				return $regex;
-	// 	}
+	/**
+	 * Strip characters a or substring from the end of the string.
+	 *
+	 * @see    Str::trimRight()
+	 *
+	 * @param  string  	$chars    String of characters to strip.
+	 * @param  bool  	$wholeStr Whether or not to match the entire string instead.
+	 * @param  int  	$limit    The number of occurrences to be striped.
+	 * @return Tea\Uzi\Str
+	 */
+	public function rtrim($chars = null, $wholeStr = false, $limit = -1)
+	{
+		return $this->trimRight($chars, $wholeStr, $limit);
+	}
 
-	// 	if(strlen($delimiter) > 1)
-	// 		list($start, $finish) = str_split($delimiter);
-	// 	else
-	// 		$start = $finish = is_null($delimiter) ? '/' : $delimiter;
 
-	// 	if(is_null($modifiers)) $modifiers = 'u';
-
-	// 	$regex = str_replace("\\{$delimiter}", "{$delimiter}", $regex);
-	// 	$regex = str_replace($delimiter, "\\{$delimiter}", $regex);
-
-	// 	return $start.$regex.$finish.$modifiers;
-	// }
+/* End Alias Methods */
 
 	/**
 	 * Returns true if $str matches the supplied pattern, false otherwise.
@@ -666,66 +555,6 @@ class Str extends Stringy implements Sliceable
 		return $match;
 	}
 
-	/**
-	 * Alias for mb_regex_encoding which default to a noop if the mbstring
-	 * module is not installed.
-	 */
-	protected function regexEncoding()
-	{
-		if (mbstring_loaded(true))
-			return call_user_func_array('mb_regex_encoding', func_get_args());
-	}
-
-	/**
-	 * Determine if the current string encoding is supported out of the box
-	 * without the need for the mbsting module.
-	 *
-	 * @param  bool $silent Whether or not to throw an exception if the current
-	 *                      string encoding is not supported
-	 * @return bool
-	 * @throws Tea\Uzi\UnexpectedEncodingException
-	 */
-	protected function supportsEncoding($silent = false)
-	{
-		if(!isset($this->isSupportedEncoding)){
-			$this->isSupportedEncoding = isset(static::$supportedEncodings[$this->encoding])
-				? static::$supportedEncodings[$this->encoding] : false;
-		}
-
-		if($this->isSupportedEncoding || $silent)
-			return $this->isSupportedEncoding;
-
-		$supported = array_keys(static::$supportedEncodings);
-		$last = count($supported) > 1
-				? '" and "'. array_pop($supported) : array_pop($supported);
-		$supported = implode(', "', $supported);
-		throw new UnexpectedEncodingException("The mbstring module is required to work with "
-			."\"{$this->encoding}\" encoded strings. ".
-			 "Otherwise, only \"{$supported}{$last}\" encoded strings are supported.");
-	}
-
-	/**
-	 * Determine if the given function exists. Used for checking mbstring specific functions.
-	 */
-	protected function mbfuncExists($func)
-	{
-		if(!isset(static::$availableMbStringFuncs[$func]))
-			static::$availableMbStringFuncs[$func] = function_exists($func);
-
-		return static::$availableMbStringFuncs[$func];
-	}
-
-	/**
-	 * Determine if the given function exists. Used for checking mbstring specific functions.
-	 */
-	protected static function optionToModifiers($option, $add='', $remove = null)
-	{
-		if(!$option)
-			return $add;
-
-		$option =str_replace( array_merge(['r', 'p'], (array)$remove, (array)$add), '', $option);
-		return $option.$add;
-	}
 
 	/**
 	 * Get a valid iterable string(s) from the given value.

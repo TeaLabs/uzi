@@ -242,14 +242,41 @@ trait StrProviders
 		];
 	}
 
-	public function minifyProvider()
+	public function isProvider()
 	{
 		return [
-			[' foo bar ', '   foo    bar   '],
-			[" foo bar foo bar ", "  foo    bar   \n  foo   bar   "]
+			[true, '/', '/'],
+			[false, '/', ' /'],
+			[false, '/', ' /a'],
+			[true, 'foo/*', 'foo/bar/baz'],
+			[false, 'foo/*', 'foo/bar/baz', false],
+			[true, '*/foo', 'blah/baz/foo'],
+			[true, 'foo/*', new HasToString('foo/bar/baz')],
+			[false, '/Foo/Bar', '/foo/bar'],
+			[true, '/Foo/Bar', '/foo/bar', false, false],
 		];
 	}
 
+	public function isAnyProvider()
+	{
+				// Converts single needles to array
+		$isData = array_map(function ($array) {
+			$array[2] = array($array[2]);
+			return $array;
+		}, $this->isProvider());
+
+		$data = [
+			[true, 'foo/*', ['/', 'foo/']],
+			[true, 'foo/*', ['/', 'foobar', 'foo/bar']],
+			[false, 'foo/bar/*', ['/', 'foobar', 'foo/bar']],
+
+			[true, 'foo/*', new Traversable(['/', 'foo/'])],
+			[true, 'foo/*', new Traversable(['/', 'foobar', 'foo/bar'])],
+			[false, 'foo/bar/*', new Traversable(['/', 'foobar', 'foo/bar'])],
+		];
+
+		return array_merge($isData, $data);
+	}
 
 	public function trimProvider()
 	{

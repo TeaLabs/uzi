@@ -146,6 +146,31 @@ class StrTest extends TestCase
 		$this->assertEquals($str, $value);
 	}
 
+
+	/**
+	 * @dataProvider isProvider()
+	 */
+	public function testIs($expected, $value, $search, $wildcards=true, $caseSensitive = true, $encoding = null)
+	{
+		$str = Str::create($value, $encoding);
+		$result = $str->is($search, $wildcards, $caseSensitive);
+		$this->assertInternalType('boolean', $result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
+	}
+
+	/**
+	 * @dataProvider isAnyProvider()
+	 */
+	public function testIsAny($expected, $value, $search, $wildcards=true, $caseSensitive = true, $encoding = null)
+	{
+		$str = Str::create($value, $encoding);
+		$result = $str->isAny($search, $wildcards, $caseSensitive);
+		$this->assertInternalType('boolean', $result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($str, $value);
+	}
+
 	/**
 	 * @dataProvider trimProvider()
 	 */
@@ -206,10 +231,6 @@ class StrTest extends TestCase
 		$this->assertEquals($str, $value);
 	}
 
-	public function testIs()
-	{
-		# code...
-	}
 
 	public function testRegexReplace()
 	{
