@@ -96,80 +96,25 @@ class Uzi
 
 
 	/**
-	 * Determine whether a value can be casted to string.
-	 *
-	 * @see Tea\Uzi\can_str_cast()
-	 * @uses Tea\Uzi\can_str_cast()
-	 *
-	 * @param  mixed   $value
-	 * @return bool
-	 */
-	public static function canCast($value)
+	* Generate a more truly "random" alpha-numeric string.
+	*
+	* @param  int  $length
+	*
+	* @return \Tea\Uzi\Str
+	*/
+	public static function random($length = 16)
 	{
-		return can_str_cast($value);
-	}
+		$string = '';
 
-	/**
-	 * Join provided pieces with single instances of the value (glue)
-	 *
-	 * @param  string 			$glue
-	 * @param  strings|array 	...$pieces
-	 *
-	 * @return string
-	 */
-	public static function join($glue, ...$pieces)
-	{
-		if(count($pieces) === 1 && is_array($pieces[0])){
-			$pieces = $pieces[0];
+		while (($len = strlen($string)) < $length) {
+			$size = $length - $len;
+
+			$bytes = random_bytes($size);
+
+			$string .= substr(str_replace(['/', '+', '='], '', base64_encode($bytes)), 0, $size);
 		}
 
-		$joined = (string) array_shift($pieces);
-
-		foreach ($pieces as $piece) {
-			$joined = static::finish($joined, $glue) . static::lstrip($piece, $glue);
-		}
-
-		return $joined;
-	}
-
-	/**
-	 * Return a formatted string.
-	 *
-	 * @param  string  $format
-	 * @param  array   $placeholders
-	 * @param  mixed   $default
-	 * @return string
-	 */
-	public static function render($format, $placeholders = [], $default = '')
-	{
-		$placeholders = (array) $placeholders;
-		$matches = [];
-		if(!preg_match_all('/\{([^{}]*)\}+/u', $format, $matches))
-			return sprintf($format, ...array_values($placeholders));
-
-		ksort($placeholders, SORT_NATURAL);
-		$placeholders['__default__'] = $default;
-		$positions = array_flip(array_keys($placeholders));
-
-		$type_specifiers = '/([sducoxXbgGeEfF])$/u';
-		$replacements = [];
-
-		foreach ($matches[1] as $match) {
-
-			list($name, $options) = array_pad(explode(':', $match, 2), 2, '');
-			if(!preg_match($type_specifiers, $options))
-				$options .= 's';
-
-			$position = array_key_exists($name, $positions)
-					? $positions[$name]+1 : $positions['__default__']+1;
-
-			$pattern = '%'.$position.'$'.$options;
-			$replacements['{'.$match.'}'] = $pattern;
-		}
-
-		$format = str_replace(array_keys($replacements), array_values($replacements), $format);
-
-		return sprintf($format, ...array_values($placeholders));
+		return Str::create($string);
 	}
 
 

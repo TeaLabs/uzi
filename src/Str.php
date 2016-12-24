@@ -1,21 +1,12 @@
 <?php
 namespace Tea\Uzi;
 
-use Countable;
-use TypeError;
-use ArrayAccess;
-use ArrayIterator;
 use Stringy\Stringy;
 use Tea\Regex\Regex;
-use Tea\Regex as re;
 use Tea\Regex\Modifiers;
-use IteratorAggregate;
-use OutOfBoundsException;
 use Tea\Uzi\Utils\Helpers;
 use Tea\Uzi\Utils\Pluralizer;
-use InvalidArgumentException;
 use Tea\Contracts\General\Sliceable;
-use Tea\Regex\RegularExpressionCollection;
 use Tea\Contracts\Regex\RegularExpression as RegularExpressionContract;
 
 class Str extends Stringy
@@ -114,6 +105,73 @@ class Str extends Stringy
 		$str->str = $str->str . $substring;
 
 		return $str;
+	}
+
+
+	/**
+	 * Return a formatted string.
+	 *
+	 * @param  string  $format
+	 * @param  array   $placeholders
+	 * @param  mixed   $default
+	 * @return string
+	 */
+	public function _format($format, $placeholders = [], $default = '')
+	{
+		$placeholders = (array) $placeholders;
+		$matches = [];
+		if(!preg_match_all('/\{([^{}]*)\}+/u', $format, $matches))
+			return sprintf($format, ...array_values($placeholders));
+
+		ksort($placeholders, SORT_NATURAL);
+		$placeholders['__default__'] = $default;
+		$positions = array_flip(array_keys($placeholders));
+
+		$type_specifiers = '/([sducoxXbgGeEfF])$/u';
+		$replacements = [];
+
+		foreach ($matches[1] as $match) {
+
+			list($name, $options) = array_pad(explode(':', $match, 2), 2, '');
+			if(!preg_match($type_specifiers, $options))
+				$options .= 's';
+
+			$position = array_key_exists($name, $positions)
+			? $positions[$name]+1 : $positions['__default__']+1;
+
+			$pattern = '%'.$position.'$'.$options;
+			$replacements['{'.$match.'}'] = $pattern;
+		}
+
+		$format = str_replace(array_keys($replacements), array_values($replacements), $format);
+
+		return sprintf($format, ...array_values($placeholders));
+	}
+
+
+	/**
+	 * Join provided pieces with single instances of the Str
+	 *
+	 * @param  strings|iterable   $pieces
+	 *
+	 * @return \Tea\Uzi\Str
+	 */
+	public static function join($pieces)
+	{
+		$pieces = func_get_args();
+
+		if(count($pieces) === 1 && Helpers::isNoneStringIterable($pieces[0]))
+			$pieces = array_values(Helpers::iterableToArray($pieces[0]));
+
+		$count = count($pieces);
+		foreach ($pieces as $key => $piece) {
+			// $joined = static::finish($joined, $glue) . static::lstrip($piece, $glue);
+			$piece = $this->getNew($piece);
+			$isLast = ($key+1) === $count;
+			$joined .= $key === 0 ? $piece->stripRight($this->str) : $isLast;
+		}
+
+		return $joined;
 	}
 
 

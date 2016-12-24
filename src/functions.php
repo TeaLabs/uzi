@@ -24,6 +24,19 @@ function str($str = '', $encoding = null)
 
 
 /**
+* Generate a more truly "random" alpha-numeric string.
+*
+* @param  int  $length
+*
+* @return \Tea\Uzi\Str
+*/
+function random($length = 16)
+{
+	return Uzi::random($length);
+}
+
+
+/**
  * Determine whether the mbstring module is loaded. If strict is false (the default),
  * checks whether a polyfill for mbstring exists.
  *
