@@ -7,17 +7,14 @@
          stopOnFailure="false"
          syntaxCheck="false">
     <testsuites>
-        <testsuite name="uzi.helpers">
+        <testsuite name="helpers">
             <file>tests/HelpersTest.php</file>
         </testsuite>
-        <testsuite name="uzi.str">
+        <testsuite name="str">
             <file>tests/StrTest.php</file>
         </testsuite>
-        <testsuite name="uzi.static">
+        <testsuite name="uzi">
             <file>tests/UziTest.php</file>
-        </testsuite>
-        <testsuite name="uzi.regex">
-            <file>tests/RegexTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
