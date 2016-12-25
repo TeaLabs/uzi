@@ -253,6 +253,28 @@ trait StrProviders
 		];
 	}
 
+	public function joinProvider()
+	{
+		return [
+			['a/b/c', '/', ['a', 'b', 'c']],
+			['a//b//c', '/', ['a', '/b/', 'c'], false],
+			['a,,b,c,', ',', ['a', '','b', 'c', ''], false],
+			[',a,,b,c,', ',', [ '', 'a', '','b', 'c', ''], false],
+			[',a,,b,c,', ',', [ null, 'a', '','b', 'c', ''], false],
+			[',,a,,b,c,', ',', [ ',', 'a', '','b', 'c', ''], false],
+			['abc', '', [ '', 'a', '','b', 'c', ''], false],
+			[' a  b c ', ' ', [ '', 'a', '','b', 'c', ''], false],
+			['a/b/c', '/', ['a/', '/b/', '/c'], true],
+			['/a/b/c/', '/', ['/a/', '/b', '//c/'], true],
+			['//a/b/c//', '/', ['//a//', '/b', '//c//'], true],
+			['/a/b/c/', '/', ['/', 'a', 'b', 'c', '/'], true],
+			['/a/b/c/', '/', ['', 'a', 'b', 'c', ''], true],
+			['/a/b/c/', '/', ['', '/a', 'b', 'c/', ''], true],
+			['a/b/c', '/', ['a', '', 'b', 'c'], true],
+			['a/b/c', '/', ['a', '/', '', 'b', 'c'], true],
+		];
+	}
+
 	public function isProvider()
 	{
 		return [

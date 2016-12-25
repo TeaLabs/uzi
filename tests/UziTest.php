@@ -5,19 +5,11 @@ use Tea\Uzi\Uzi;
 
 class UziTest extends TestCase
 {
-	/**
-	 * @dataProvider canStrCastProvider()
-	 */
-	public function testCanCast($expected, $value)
+	public function testRandom()
 	{
-		$result = Uzi::canCast($value);
-
-		$this->assertInternalType('boolean', $result);
-		$this->assertEquals($expected, $result);
-
-		if($result){
-			$this->assertEquals( $value, (string) $value );
-		}
-
+		$result = Uzi::random(25);
+		$this->assertStr($result);
+		$this->assertEquals(25, $result->length());
+		$this->assertTrue($result->isAlphanumeric());
 	}
 }

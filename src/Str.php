@@ -148,32 +148,46 @@ class Str extends Stringy
 		return sprintf($format, ...array_values($placeholders));
 	}
 
-
 	/**
-	 * Join provided pieces with single instances of the Str
+	 * Join provided pieces with the Str. If $glueOnce is FALSE or not provided,
+	 * this method calls implode() with the Str as $glue and $pieces as $pieces.
+	 * If $gluleOnce is passed as TRUE, the Str will first be stripped from both
+	 * ends of the pieces to ensure only one instance of Str exists between the
+	 * pieces.
 	 *
-	 * @param  strings|iterable   $pieces
+	 * For example:
+	 *   Str::create('/')->join(['/a', '/b/', '/c']); // returns "/a//b///c"
+	 *   Str::create('/')->join(['/a', 'b/', '/c'], true); // returns "/a/b/c"
+	 *
+	 * @param  iterable   $pieces
+	 * @param  bool       $glueOnce
 	 *
 	 * @return \Tea\Uzi\Str
 	 */
-	public static function join($pieces)
+	public function join($pieces, $glueOnce = false)
 	{
-		$pieces = func_get_args();
+		$glue = $this->str;
 
-		if(count($pieces) === 1 && Helpers::isNoneStringIterable($pieces[0]))
-			$pieces = array_values(Helpers::iterableToArray($pieces[0]));
-
-		$count = count($pieces);
-		foreach ($pieces as $key => $piece) {
-			// $joined = static::finish($joined, $glue) . static::lstrip($piece, $glue);
-			$piece = $this->getNew($piece);
-			$isLast = ($key+1) === $count;
-			$joined .= $key === 0 ? $piece->stripRight($this->str) : $isLast;
+		if(!$glueOnce || $glue == ""){
+			return $this->getNew(implode($glue, Helpers::iterableToArray($pieces)));
 		}
 
-		return $joined;
-	}
+		$result = null;
 
+		foreach ($pieces as $piece) {
+
+			if(is_null($result)){
+				$result = $this->getNew($piece);
+			}
+			else{
+				$piece = $piece == "" || $piece instanceof self ? $piece : $this->getNew($piece);
+				$result = $result->finish($glue);
+				$result->str = $result->str . ($piece == "" ? "" : $piece->stripLeft($glue));
+			}
+		}
+
+		return is_null($result) ? $this->getNew('') : $this->getNew($result);
+	}
 
 	/**
 	 * Determine if the string is a pattern matching the given value.

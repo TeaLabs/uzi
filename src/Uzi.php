@@ -96,7 +96,7 @@ class Uzi
 
 
 	/**
-	* Generate a more truly "random" alpha-numeric string.
+	* Generate a alpha-numeric string.
 	*
 	* @param  int  $length
 	*

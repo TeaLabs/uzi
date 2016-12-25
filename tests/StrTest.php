@@ -76,6 +76,19 @@ class StrTest extends TestCase
 
 
 	/**
+	 * @dataProvider joinProvider()
+	 */
+	public function testJoin($expected, $glue, $pieces, $glueOnce = false, $encoding = null)
+	{
+		$str = Str::create($glue, $encoding);
+		$result = $str->join($pieces, $glueOnce);
+		$this->assertStr($result);
+		$this->assertEquals($expected, $result);
+		$this->assertEquals($glue, $str);
+	}
+
+
+	/**
 	 * @dataProvider isProvider()
 	 */
 	public function testIs($expected, $value, $search, $wildcards=true, $caseSensitive = true, $encoding = null)

@@ -24,66 +24,13 @@ function str($str = '', $encoding = null)
 
 
 /**
-* Generate a more truly "random" alpha-numeric string.
+* Generate a alpha-numeric string.
 *
 * @param  int  $length
 *
 * @return \Tea\Uzi\Str
 */
-function random($length = 16)
+function random_str($length = 16)
 {
 	return Uzi::random($length);
 }
-
-
-/**
- * Determine whether the mbstring module is loaded. If strict is false (the default),
- * checks whether a polyfill for mbstring exists.
- *
- * @param  bool   $strict
- * @return bool
- */
-function mbstring_loaded($strict = false)
-{
-	static $extension, $polyfill;
-
-	if(is_null($extension))
-		$extension = extension_loaded('mbstring');
-
-	if(is_null($polyfill))
-		$polyfill = function_exists('mb_strlen');
-
-	return ($extension || (!$strict && $polyfill));
-}
-
-
-/**
- * Determine whether a value can be casted to string. Returns true if value is a
- * scalar (String, Integer, Float, Boolean etc.), null or if it's an object that
- * implements the __toString() method. Otherwise, returns false.
- *
- * @param  mixed   $value
- * @return bool
- */
-function can_str_cast($value)
-{
-	if(is_null($value) || is_scalar($value))
-		return true;
-
-	if(is_object($value) && method_exists($value, '__toString'))
-		return true;
-
-	return false;
-}
-
-/**
- * Determine whether a value is iterable and not a string.
- *
- * @param  mixed   $value
- * @return bool
- */
-function is_iterable_not_str($value)
-{
-	return is_iterable($value) && ($value instanceof Stringy);
-}
-

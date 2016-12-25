@@ -7,9 +7,6 @@
          stopOnFailure="false"
          syntaxCheck="false">
     <testsuites>
-        <testsuite name="helpers">
-            <file>tests/HelpersTest.php</file>
-        </testsuite>
         <testsuite name="str">
             <file>tests/StrTest.php</file>
         </testsuite>
