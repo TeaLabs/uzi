@@ -117,6 +117,20 @@ class Uzi
 		return Str::create($string);
 	}
 
+	/**
+	 * Determine whether a value can be casted to string. Returns true if value
+	 * is scalar (e.g. string, integer, float, boolean), null or if it's an
+	 * object that implements the __toString() method. Returns false otherwise.
+	 *
+	 * @param  mixed   $value
+	 * @return bool
+	 */
+	public static function isStringable($value)
+	{
+		return is_string($value) || is_null($value)
+				|| (is_object($value) && method_exists($value, '__toString'))
+				|| is_scalar($value);
+	}
 
 	/**
 	 * Creates an instance of Str and invokes the given method with the
